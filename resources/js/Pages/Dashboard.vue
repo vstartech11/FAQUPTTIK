@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
-import { ref, onMounted, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 const gedungList = ref([]);
 const selectedGedung = ref(null);
@@ -10,6 +10,47 @@ const csrfToken = document
     .getAttribute("content");
 
 const isIpAddressValid = ref(true);
+
+const selectedMode = ref("kruskal");
+
+// Fetch mode saat halaman dimuat
+const fetchMode = async () => {
+    try {
+        const response = await fetch("/mode");
+        const data = await response.json();
+        selectedMode.value = data.mode;
+    } catch (error) {
+        console.error("Gagal mengambil mode:", error);
+    }
+};
+
+// Update mode saat admin mengubah dropdown
+const updateMode = async () => {
+    try {
+        const response = await fetch("/mode", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": csrfToken,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ mode: selectedMode.value }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gagal mengubah mode! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        alert(result.message);
+    } catch (error) {
+        console.error("Error mengubah mode:", error);
+    }
+};
+
+// Panggil saat halaman dimuat
+onMounted(() => {
+    fetchMode();
+});
 
 // Fetch data gedung dari server
 const fetchGedungData = async () => {
@@ -131,6 +172,24 @@ const addGedung = () => {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <div class="mb-4">
+                    <label
+                        for="modeSelect"
+                        class="block text-sm font-medium text-gray-600"
+                    >
+                        Pilih Mode Algoritma
+                    </label>
+                    <select
+                        id="modeSelect"
+                        v-model="selectedMode"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        @change="updateMode"
+                    >
+                        <option value="kruskal">Kruskal</option>
+                        <option value="dijkstra">Dijkstra</option>
+                    </select>
+                </div>
+
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900">
                         <h3 class="text-lg font-bold mb-4">

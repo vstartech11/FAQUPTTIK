@@ -5,7 +5,7 @@
                 <h3>Chatbot</h3>
                 <button @click="toggleChatbot" class="close-btn">✕</button>
             </div>
-            <div v-if="isOpen" class="chatbot-body">
+            <div v-if="isOpen" class="chatbot-body" ref="chatBody">
                 <!-- Bubble Chat -->
                 <div
                     v-for="(message, index) in messages"
@@ -17,6 +17,13 @@
                     }"
                 >
                     <span>{{ message.text }}</span>
+                    <!-- Display execution time if available -->
+                    <div v-if="message.executionTime" class="execution-time">
+                        <span
+                            >Waktu Eksekusi:
+                            {{ message.executionTime }} detik</span
+                        >
+                    </div>
                 </div>
             </div>
             <div v-if="isOpen" class="chatbot-footer">
@@ -39,6 +46,7 @@
 const csrfToken = document
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
+
 export default {
     data() {
         return {
@@ -77,20 +85,45 @@ export default {
                     body: JSON.stringify({ message: userMessage }),
                 });
                 const data = await response.json();
-                this.messages.push({ text: data.reply, sender: "bot" });
+
+                // Check if execution time is present in the response
+                if (data.execution_time) {
+                    this.messages.push({
+                        text: data.reply,
+                        sender: "bot",
+                        executionTime: data.execution_time, // Add execution time to message
+                    });
+                } else {
+                    this.messages.push({
+                        text: data.reply,
+                        sender: "bot",
+                    });
+                }
+
+                // Automatically scroll to the bottom when a new message is added
+                this.scrollToBottom();
             } catch (error) {
                 console.error(error);
                 this.messages.push({
-                    text: "Maaf, terjadi kesalahan. Coba lagi nanti.",
+                    text: "Pesan gagal dikirim ke server.",
                     sender: "bot",
                 });
+                this.scrollToBottom();
             }
+        },
+        scrollToBottom() {
+            // Scroll to the bottom of the chat container
+            this.$nextTick(() => {
+                const chatBody = this.$refs.chatBody;
+                chatBody.scrollTop = chatBody.scrollHeight;
+            });
         },
     },
 };
 </script>
 
 <style scoped>
+/* Chatbot Container Styling */
 .chatbot-floating {
     position: fixed;
     bottom: 20px;
@@ -101,101 +134,119 @@ export default {
 .chatbot-container {
     width: 350px;
     max-height: 500px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: white;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border: 1px solid #ddd;
 }
 
+/* Header Styling */
 .chatbot-header {
     background-color: #007bff;
     color: white;
-    padding: 10px;
+    padding: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 12px 12px 0 0;
 }
 
 .chatbot-header .close-btn {
     background: none;
     border: none;
     color: white;
-    font-size: 16px;
+    font-size: 18px;
     cursor: pointer;
 }
 
+/* Chat Bubble Styling */
 .chatbot-body {
     flex-grow: 1;
-    padding: 10px;
+    padding: 12px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    gap: 10px;
 }
 
 .chat-bubble {
-    margin-bottom: 10px;
     max-width: 80%;
-    padding: 10px;
-    border-radius: 15px;
+    padding: 12px;
+    border-radius: 18px;
     line-height: 1.5;
     display: inline-block;
+    margin-bottom: 12px;
 }
 
 .chat-bubble.bot {
     align-self: flex-start;
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #f1f1f1;
+    color: #333;
+    border-radius: 18px 18px 0 18px;
 }
 
 .chat-bubble.user {
     align-self: flex-end;
-    background-color: #d1e7dd;
-    color: #0f5132;
+    background-color: #007bff;
+    color: white;
+    border-radius: 18px 18px 18px 0;
 }
 
+/* Footer Styling */
 .chatbot-footer {
     display: flex;
-    padding: 10px;
+    padding: 12px;
     border-top: 1px solid #ddd;
+    background-color: #f8f9fa;
 }
 
 .chatbot-footer input {
     flex-grow: 1;
-    padding: 8px;
+    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 14px;
 }
 
 .chatbot-footer button {
-    padding: 8px 12px;
-    margin-left: 8px;
+    padding: 10px 14px;
+    margin-left: 10px;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 14px;
 }
 
 .chatbot-footer button:hover {
     background-color: #0056b3;
 }
 
+/* Toggle Button Styling */
 .chatbot-toggle {
     width: 60px;
     height: 60px;
     border-radius: 50%;
     background-color: #007bff;
     color: white;
-    font-size: 24px;
+    font-size: 30px;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .chatbot-toggle:hover {
     background-color: #0056b3;
+}
+
+/* Execution Time Styling */
+.execution-time {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 6px;
 }
 </style>

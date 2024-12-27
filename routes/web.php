@@ -7,6 +7,10 @@ use Inertia\Inertia;
 use App\Http\Controllers\Api\gedungController;
 use App\Http\Controllers\Api\dataController;
 use App\Http\Controllers\Api\ChatbotController;
+use App\Http\Controllers\Api\SettingController;
+
+Route::get('/mode', [SettingController::class, 'getMode']);
+Route::post('/mode', [SettingController::class, 'setMode']);
 
 Route::post('/chatbot', [ChatbotController::class, 'handleMessage']);
 
