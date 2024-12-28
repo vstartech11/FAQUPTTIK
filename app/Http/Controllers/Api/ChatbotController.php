@@ -8,7 +8,82 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Log;
 class ChatbotController extends Controller
 {
-    public function handleMessage(Request $request)
+// insertqna
+public function insertQnA(Request $request)
+{
+    $validated = $request->validate([
+        'question' => 'required|string',
+        'answer' => 'required|string',
+    ]);
+
+    try {
+        $qna = QnA::create($validated);
+        return response()->json(['message' => 'Data QnA berhasil ditambahkan.', 'data' => $qna]);
+    } catch (\Exception $e) {
+        Log::error("Error: ".$e->getMessage());
+        return response()->json(['message' => 'Terjadi kesalahan saat menambahkan data QnA.'], 500);
+    }
+}
+
+// updateqna
+public function editQnA(Request $request, $id)
+{
+    $validated = $request->validate([   
+        'question' => 'required|string',
+        'answer' => 'required|string',
+    ]);
+
+    try {
+        $qna = QnA::find($id);
+        if (!$qna) {
+            return response()->json(['message' => 'Data QnA tidak ditemukan.'], 404);
+        }
+
+        $qna->question = $validated['question'];
+        $qna->answer = $validated['answer'];
+        $qna->save();
+
+        return response()->json(['message' => 'Data QnA berhasil diperbarui.', 'data' => $qna]);
+    } catch (\Exception $e) {
+        Log::error("Error: ".$e->getMessage());
+        return response()->json(['message' => 'Terjadi kesalahan saat memperbarui data QnA.'], 500);
+    }
+}
+
+// deleteqna
+public function deleteQnA($id)
+{
+    try {
+        $qna = QnA::find($id);
+        if (!$qna) {
+            return response()->json(['message' => 'Data QnA tidak ditemukan.'], 404);
+        }
+
+        $qna->delete();
+        return response()->json(['message' => 'Data QnA berhasil dihapus.']);
+    } catch (\Exception $e) {
+        Log::error("Error: ".$e->getMessage());
+        return response()->json(['message' => 'Terjadi kesalahan saat menghapus data QnA.'], 500);
+    }
+}
+
+//getqna
+public function getQnA()
+{
+    try {
+        $qna = QnA::all();
+        Log::debug("QnA: ".$qna);
+        if ($qna->isEmpty()) {
+            return response()->json(['message' => 'Database QnA kosong.']);
+        }
+        return response()->json($qna);
+    } catch (\Exception $e) {
+        Log::error("Error: ".$e->getMessage());
+        return response()->json(['message' => 'Terjadi kesalahan saat mengambil data QnA.'], 500);
+    }
+}
+
+public function handleMessage(Request $request)
 {
     try {
         // Waktu mulai eksekusi
@@ -40,7 +115,7 @@ class ChatbotController extends Controller
 
         // Pilih algoritma berdasarkan mode
         if ($mode === 'kruskal') {
-            $bestMatch = $this->kruskal($edges, $qna);
+            $bestMatch = $this->kruskal($edges);
         } else { // Mode Dijkstra
             $bestMatch = $this->djikstra($edges, $qna);
         }
@@ -63,7 +138,8 @@ class ChatbotController extends Controller
     } catch (\Exception $e) {
         Log::error("Error: ".$e->getMessage());
         return response()->json([
-            'reply' => 'Terjadi kesalahan saat memproses permintaan.'
+            'reply' => 'Terjadi kesalahan saat memproses permintaan.',
+            'execution_time' => $executionTime . ' seconds'
         ], 500);
     }
 }
@@ -78,23 +154,31 @@ class ChatbotController extends Controller
         return 1 - ($distance / $maxLength); // Skala 0 (tidak mirip) sampai 1 (sama persis)
     }
 
-    private function kruskal($edges, $qna)
-    {
-        // Urutkan edge berdasarkan bobot (kemiripan tertinggi dulu)
-        usort($edges, function ($a, $b) {
-            return $b['weight'] <=> $a['weight'];
-        });
+    private function kruskal($edges)
+{
+    // Urutkan edge berdasarkan bobot (kemiripan tertinggi dulu)
+    usort($edges, function ($a, $b) {
+        return $b['weight'] <=> $a['weight'];
+    });
 
-        // Ambil edge dengan bobot tertinggi yang terhubung dengan user_message
-        foreach ($edges as $edge) {
-            if ($edge['u'] === 'user_message' && $edge['weight'] > 0.5) {
-                // Ambang batas kemiripan > 0.5
-                return $edge['v'];
+    // Cari edge dengan bobot tertinggi yang terhubung dengan user_message
+    $bestMatch = null;
+    $highestSimilarity = 0;
+
+    foreach ($edges as $edge) {
+        if ($edge['u'] === 'user_message' && $edge['weight'] > 0.5) {
+            // Ambang batas kemiripan > 0.5
+            // Pilih QnA dengan bobot kemiripan tertinggi
+            if ($edge['weight'] > $highestSimilarity) {
+                $highestSimilarity = $edge['weight'];
+                $bestMatch = $edge['v']; // Menyimpan ID QnA yang relevan
             }
         }
-
-        return null; // Tidak ada kecocokan
     }
+
+    return $bestMatch; // Mengembalikan ID QnA dengan kemiripan tertinggi
+}
+
 
     private function djikstra($edges, $qna)
     {

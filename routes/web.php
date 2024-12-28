@@ -32,6 +32,11 @@ Route::middleware( ['auth', 'verified'])->group(function (){
     Route::post('/gedung', [gedungController::class, 'insertGedung']); // Untuk menambah data
     Route::put('/gedung/{id}', [gedungController::class, 'editGedung']); // Untuk edit
     Route::delete('/gedung/{id}', [gedungController::class, 'deleteGedung']); // Untuk delete
+    //data qna get
+    Route::get('/data/qna', [ChatbotController::class, 'getQnA']);
+    Route::post('/data/qna', [ChatbotController::class, 'insertQnA']);
+    Route::put('/data/qna/{id}', [ChatbotController::class, 'editQnA']);
+    Route::delete('/data/qna/{id}', [ChatbotController::class, 'deleteQnA']);
 });
 
 Route::get('/dashboard', function () {
